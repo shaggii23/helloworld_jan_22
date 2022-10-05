@@ -1,30 +1,44 @@
 pipeline {
     agent any
-
+    tools{
+        maven 'M2_HOME'
+    }
+    environment {
+    registry = '076892551558.dkr.ecr.us-east-1.amazonaws.com/devop_repository'
+    registryCredential = 'jenkins-ecr'
+    dockerimage = ''
+  }
     stages {
-        stage('Hello') {
-            steps {
-                echo 'Hello'
-                sleep 5
+        stage('Checkout'){
+            steps{
+                git branch: 'main', url: 'https://github.com/Hermann90/helloworld_jan_22.git'
             }
         }
-         stage('Build') {
+        stage('Code Build') {
             steps {
-                echo 'Build'
-                sleep 5
+                sh 'mvn clean package'
             }
         }
-         stage('Test') {
+        stage('Test') {
             steps {
-                echo 'Test'
-                sleep 5
+                sh 'mvn test'
             }
         }
-         stage('Deploy') {
+        stage('Build Image') {
             steps {
-                echo 'Deploy'
-                sleep 5
+                script{
+                    dockerImage = docker.build registry + ":$BUILD_NUMBER"
+                } 
             }
         }
+        stage('Deploy image') {
+            steps{
+                script{ 
+                    docker.withRegistry("https://"+registry,"ecr:us-east-1:"+registryCredential) {
+                        dockerImage.push()
+                    }
+                }
+            }
+        }  
     }
 }
